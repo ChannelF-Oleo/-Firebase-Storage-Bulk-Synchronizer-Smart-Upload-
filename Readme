@@ -1,0 +1,90 @@
+
+# ☁️ Firebase Storage Bulk Synchronizer (Smart Upload)
+
+Un script de Node.js de alto rendimiento diseñado para sincronizar masivamente archivos locales (200k+) hacia Firebase Storage.
+
+Este proyecto resuelve el problema de subir grandes volúmenes de imágenes de manera eficiente, minimizando costos de lectura en la nube y manejando interrupciones de red mediante un sistema de persistencia de estado.
+
+## 🚀 Características Principales
+
+-   **🔄 Sincronización Diferencial Inteligente:**
+    -   Compara archivos locales contra un listado de la nube (generado por `gsutil`) antes de intentar subir.
+    -   Utiliza estructuras de datos `Set` para realizar comparaciones en tiempo O(1), procesando 200k+ registros en milisegundos.
+    -   Soporta limpieza de formatos de salida de `gsutil` (UTF-16/UTF-8) automáticamente.
+
+-   **⏯️ Sistema de "Resume" (Reanudación):**
+    -   Persistencia de estado mediante `progreso.json`.
+    -   Si el proceso se interrumpe (fallo de internet/luz), el script pregunta si desea retomar exactamente donde se quedó, sin re-escanear.
+
+-   **⚡ Concurrencia Controlada:**
+    -   Implementa un sistema de colas (Batch Processing) para subir archivos en paralelo (ej. 20 simultáneos) sin saturar el event loop de Node.js ni la red.
+
+-   **🛡️ Seguridad y Eficiencia:**
+    -   Validación de tipos de archivo (imágenes) antes de la subida.
+    -   Desactivación de validaciones md5 innecesarias para acelerar el throughput.
+
+## 🛠️ Requisitos
+
+-   Node.js (v14 o superior)
+-   Una cuenta de servicio de Firebase (Service Account Key)
+-   Acceso al bucket de Firebase Storage
+
+## 📦 Instalación
+
+1.  Clonar el repositorio:
+    ```bash
+    git clone [https://github.com/tu-usuario/firebase-bulk-sync.git](https://github.com/tu-usuario/firebase-bulk-sync.git)
+    cd firebase-bulk-sync
+    ```
+
+2.  Instalar dependencias:
+    ```bash
+    npm install firebase-admin
+    ```
+
+3.  Configuración:
+    -   Coloca tu archivo de credenciales (`service-account.json`) en la raíz (asegúrate de que esté en `.gitignore`).
+    -   Coloca tus imágenes en la carpeta `./fotos` (o configura la variable `LOCAL_FOLDER`).
+    -   (Opcional) Genera un listado actual de tu bucket para evitar lecturas de API costosas:
+        ```bash
+        gsutil ls -r gs://tu-bucket/carpeta/ > data/lista_storage.txt
+        ```
+
+## ⚙️ Configuración del Script
+
+Edita las constantes al inicio de `sync_master.js`:
+
+```javascript
+const SERVICE_ACCOUNT = "./service-account-key.json";
+const BUCKET_NAME = "tu-proyecto.firebasestorage.app";
+const LOCAL_FOLDER = "./fotos";
+const CONCURRENCY_LIMIT = 25; // Ajustar según tu ancho de banda
+````
+
+## ▶️ Uso
+
+Ejecuta el script:
+
+```bash
+node sync_master.js
+```
+
+El script realizará lo siguiente:
+
+1.  Analizará la lista de la nube y la carpeta local.
+2.  Detectará la codificación del archivo de texto (Windows UTF-16 vs UTF-8).
+3.  Calculará los archivos faltantes.
+4.  Te pedirá confirmación para iniciar.
+5.  Mostrará una barra de progreso en tiempo real.
+
+## 🧠 Lógica del Algoritmo
+
+1.  **Ingestión:** Carga masiva de nombres de archivos en memoria usando `Set` para evitar duplicados y búsquedas lentas.
+2.  **Filtrado:** `Archivos Locales` - `Archivos Nube` = `Cola de Trabajo`.
+3.  **Batching:** Divide la cola en lotes (`chunks`) definidos por `CONCURRENCY_LIMIT`.
+4.  **Promesas:** Ejecuta cada lote con `Promise.all()` para maximizar el ancho de banda.
+5.  **Checkpoint:** Al finalizar cada lote exitoso, actualiza `progreso.json`.
+
+## 📝 Licencia
+
+Este proyecto está bajo la Licencia MIT.
