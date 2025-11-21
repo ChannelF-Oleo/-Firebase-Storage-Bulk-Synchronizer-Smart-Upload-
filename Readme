@@ -1,115 +1,140 @@
-# ☁️ Firebase Storage Bulk Synchronizer (Smart Upload)
 
-![Node.js](https://img.shields.io/badge/Node.js-v14+-43853D?style=flat&logo=node.js&logoColor=white)
-![Firebase](https://img.shields.io/badge/Firebase-Admin_SDK-FFCA28?style=flat&logo=firebase&logoColor=black)
-![License](https://img.shields.io/badge/License-MIT-blue.svg)
+<div align="center">
 
-Un script de **Node.js de alto rendimiento** diseñado para sincronizar masivamente archivos locales (200k+) hacia Firebase Storage de manera eficiente, resiliente y segura.
+# ☁️ Firebase Bulk Synchronizer
+### La solución definitiva para cargas masivas y resilientes
 
-Este proyecto resuelve el desafío de migrar grandes volúmenes de datos minimizando costos de lectura (API Calls) y manejando interrupciones de red mediante un sistema inteligente de persistencia de estado.
+![NodeJS](https://img.shields.io/badge/node.js-6DA55F?style=for-the-badge&logo=node.js&logoColor=white)
+![Firebase](https://img.shields.io/badge/firebase-ffca28?style=for-the-badge&logo=firebase&logoColor=black)
+![GCP](https://img.shields.io/badge/Google_Cloud-4285F4?style=for-the-badge&logo=google-cloud&logoColor=white)
+![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)
 
----
+<br>
 
-## 🚀 Características Principales
+<p align="center">
+  <strong>Sincroniza 200k+ archivos. Ahorra dinero en API calls. Nunca pierdas el progreso.</strong>
+</p>
 
-### 🔄 Sincronización Diferencial Inteligente
-- **Algoritmo Eficiente:** Compara archivos locales contra un listado de la nube (generado por `gsutil`) antes de intentar subir.
-- **Rendimiento O(1):** Utiliza estructuras de datos `Set` para realizar comparaciones instantáneas, procesando más de 200,000 registros en milisegundos.
-- **Parser Robusto:** Detecta y limpia automáticamente formatos de salida de `gsutil` (UTF-16 LE de Windows / UTF-8).
+[Reportar Bug](https://github.com/tu-usuario/tu-repo/issues) · [Solicitar Feature](https://github.com/tu-usuario/tu-repo/issues)
 
-### ⏯️ Sistema de "Resume" (Reanudación)
-- **Persistencia de Estado:** Genera un archivo `progreso.json` en tiempo real.
-- **Tolerancia a Fallos:** Si el proceso se interrumpe (fallo de internet o electricidad), el script detecta el archivo de progreso y permite retomar **exactamente** donde se quedó, evitando re-escanear miles de archivos.
-
-### ⚡ Concurrencia Controlada
-- **Batch Processing:** Implementa una cola de procesamiento por lotes para subir archivos en paralelo (ej. 25 simultáneos).
-- **Optimización de Recursos:** Maximiza el ancho de banda sin saturar el *Event Loop* de Node.js ni bloquear la red.
-
-### 🛡️ Seguridad y Eficiencia
-- **Validación de Assets:** Filtra archivos para asegurar que solo se suban imágenes válidas.
-- **Optimización de Carga:** Desactiva validaciones CRC32/MD5 redundantes en la subida para acelerar el *throughput*.
+</div>
 
 ---
 
-## 🛠️ Requisitos Técnicos
+## ⚡ ¿Por qué usar este script?
 
-- **Node.js**: v14.0.0 o superior.
-- **Firebase Service Account**: Archivo `.json` con permisos de administrador de Storage.
-- **Acceso al Bucket**: URL del bucket de Firebase Storage.
+Subir 200,000 imágenes una por una a Firebase Storage es lento y costoso. Si el proceso falla en el archivo 199,999, ¿vuelves a empezar? **No con esta herramienta.**
+
+| 🚀 Velocidad | 💰 Ahorro | 🛡️ Resiliencia |
+| :--- | :--- | :--- |
+| **Concurrencia Asíncrona**<br>Sube múltiples archivos en paralelo usando un pool de promesas optimizado. | **Smart Diffing**<br>Compara tu disco local contra la nube en milisegundos usando estructuras `Set` (O1). | **Sistema de Resume**<br>Guarda el progreso en tiempo real. Si se va la luz, retomas exactamente donde te quedaste. |
 
 ---
 
-## 📦 Instalación
+## 🧩 Arquitectura del Flujo
 
-1. **Clonar el repositorio:**
-   ```bash
-   git clone [https://github.com/tu-usuario/firebase-bulk-sync.git](https://github.com/tu-usuario/firebase-bulk-sync.git)
-   cd firebase-bulk-sync
+```mermaid
+graph TD
+    A[📁 Carpeta Local] -->|Lectura| B(Comparador O1)
+    C[☁️ Nube gsutil] -->|Parser UTF-16/8| B
+    B -->|Genera| D{¿Hay Faltantes?}
+    D -- No --> E[🎉 Fin del Proceso]
+    D -- Si --> F[📝 Cola de Trabajo]
+    F --> G[⚡ Batch Uploader]
+    G -->|Sube Lote| H[☁️ Firebase Storage]
+    H -->|Confirmación| I[💾 Guardar Checkpoint]
+    I -->|Siguiente Lote| G
 ````
 
-2.  **Instalar dependencias:**
-
-    ```bash
-    npm install firebase-admin
-    ```
-
-3.  **Configuración del entorno:**
-
-      - Coloca tu archivo de credenciales (`service-account.json`) en la **raíz** del proyecto.
-      - **IMPORTANTE:** Asegúrate de que este archivo esté en tu `.gitignore`.
-      - Crea una carpeta llamada `./fotos` y coloca allí las imágenes a subir.
-
-4.  **(Opcional) Generar índice de la nube:**
-    Para evitar costos de lectura, genera un listado usando `gsutil`:
-
-    ```bash
-    gsutil ls -r gs://tu-bucket/carpeta/ > data/lista_storage.txt
-    ```
-
 -----
 
-## ⚙️ Configuración
+## 🛠️ Instalación y Setup
 
-Edita las constantes al inicio del archivo `sync_master.js` para adaptarlo a tu proyecto:
+### 1\. Prerrequisitos
 
-```javascript
-const SERVICE_ACCOUNT = "./service-account-key.json";     // Tu llave privada
-const BUCKET_NAME = "tu-proyecto.firebasestorage.app";    // Tu bucket
-const LOCAL_FOLDER = "./fotos";                           // Carpeta de origen
-const CONCURRENCY_LIMIT = 25;                             // Hilos paralelos
-```
+Asegúrate de tener instalado:
 
------
+  * Node.js `v14+`
+  * Acceso a tu consola de Firebase
 
-## ▶️ Uso
-
-Ejecuta el script principal:
+### 2\. Clonar e Instalar
 
 ```bash
-node sync_master.js
+git clone [https://github.com/tu-usuario/firebase-bulk-sync.git](https://github.com/tu-usuario/firebase-bulk-sync.git)
+cd firebase-bulk-sync
+npm install
 ```
 
-### Flujo de Ejecución:
+### 3\. Estructura de Archivos
 
-1.  **Análisis:** Lee la lista de la nube y la carpeta local.
-2.  **Decodificación:** Detecta automáticamente la codificación (Windows UTF-16 vs UTF-8).
-3.  **Cálculo:** Identifica los archivos faltantes (Diffing).
-4.  **Confirmación:** Solicita aprobación del usuario mostrando la cantidad exacta a subir.
-5.  **Ejecución:** Muestra una barra de progreso en tiempo real con estadísticas.
+Tu carpeta debería verse así para que el script funcione "out of the box":
 
------
-
-## 🧠 Lógica del Algoritmo
-
-1.  **Ingestión:** Carga masiva de nombres de archivos en memoria usando `Set` para evitar duplicados y eliminar complejidad de búsqueda.
-2.  **Filtrado:** `Archivos Locales` - `Archivos Nube` = `Cola de Trabajo`.
-3.  **Batching:** Divide la cola en lotes (`chunks`) definidos por `CONCURRENCY_LIMIT`.
-4.  **Promesas:** Ejecuta cada lote con `Promise.all()` para concurrencia asíncrona.
-5.  **Checkpoint:** Al finalizar cada lote exitoso, actualiza `progreso.json` y libera memoria.
+```text
+📦 firebase-bulk-sync
+ ┣ 📂 fotos              <-- 📸 TUS IMÁGENES AQUÍ
+ ┣ 📂 data
+ ┃ ┗ 📜 lista_storage.txt <-- (Opcional) Output de gsutil
+ ┣ 📜 service-account.json <-- 🔑 TU LLAVE PRIVADA
+ ┣ 📜 sync_master.js     <-- 🧠 EL CEREBRO
+ ┗ 📜 package.json
+```
 
 -----
 
-## 📝 Licencia
+## 🚀 Uso
 
-Este proyecto está bajo la Licencia [MIT](https://www.google.com/search?q=LICENSE).
+### Paso 1: Configuración
+
+Edita las primeras líneas de `sync_master.js`:
+
+```javascript
+const CONFIG = {
+    bucketName: "tu-proyecto.firebasestorage.app",
+    concurrency: 25 // ⚡ Aumenta si tienes fibra óptica
+};
+```
+
+### Paso 2: Ejecutar
+
+```bash
+npm start
+```
+
+### Paso 3: ¡Disfruta\!
+
+El script te mostrará una interfaz de consola amigable:
+
+```text
+╔══════════════════════════════════════════════════════╗
+║      FIREBASE STORAGE BULK SYNCHRONIZER v2.0         ║
+╚══════════════════════════════════════════════════════╝
+
+🔍 Analizando índice de la nube...
+   ☁️  Archivos en nube: 222,748
+📂 Escaneando carpeta local...
+   💻 Archivos locales: 224,930
+═════════════════════════════════════════════════════════
+   📊 Faltantes: 2,182 archivos
+═════════════════════════════════════════════════════════
+
+👉 ¿Iniciar subida masiva? (s/n): s
+```
+
+-----
+
+## 🤖 Tecnologías
+
+  * **Core:** Node.js (FS, Path, Readline)
+  * **Cloud:** Firebase Admin SDK
+  * **Algoritmos:** Diffing via Hash Sets & Batch Processing queues.
+
+-----
+
+\<div align="center"\>
+\<small\>Hecho con ❤️ para desarrolladores que valoran su tiempo.\</small\>
+\</div\>
+
+```
+
+
 
