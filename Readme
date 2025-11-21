@@ -1,139 +1,102 @@
-
+````markdown
 <div align="center">
 
-# ☁️ Firebase Bulk Synchronizer
-### La solución definitiva para cargas masivas y resilientes
+# ☁️ Firebase Storage Bulk Synchronizer
+### Script de Carga Masiva para Padrón Fotográfico
 
-![NodeJS](https://img.shields.io/badge/node.js-6DA55F?style=for-the-badge&logo=node.js&logoColor=white)
-![Firebase](https://img.shields.io/badge/firebase-ffca28?style=for-the-badge&logo=firebase&logoColor=black)
-![GCP](https://img.shields.io/badge/Google_Cloud-4285F4?style=for-the-badge&logo=google-cloud&logoColor=white)
-![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)
-
-<br>
+![NodeJS](https://img.shields.io/badge/node.js-v14+-6DA55F?style=for-the-badge&logo=node.js&logoColor=white)
+![Firebase](https://img.shields.io/badge/firebase-admin-ffca28?style=for-the-badge&logo=firebase&logoColor=black)
 
 <p align="center">
-  <strong>Sincroniza 200k+ archivos. Ahorra dinero en API calls. Nunca pierdas el progreso.</strong>
+  <strong>Sincronización inteligente de imágenes locales a Firebase Storage con sistema de recuperación de fallos.</strong>
 </p>
-
-[Reportar Bug](https://github.com/tu-usuario/tu-repo/issues) · [Solicitar Feature](https://github.com/tu-usuario/tu-repo/issues)
 
 </div>
 
 ---
 
-## ⚡ ¿Por qué usar este script?
+## ⚡ Características Principales
 
-Subir 200,000 imágenes una por una a Firebase Storage es lento y costoso. Si el proceso falla en el archivo 199,999, ¿vuelves a empezar? **No con esta herramienta.**
-
-| 🚀 Velocidad | 💰 Ahorro | 🛡️ Resiliencia |
-| :--- | :--- | :--- |
-| **Concurrencia Asíncrona**<br>Sube múltiples archivos en paralelo usando un pool de promesas optimizado. | **Smart Diffing**<br>Compara tu disco local contra la nube en milisegundos usando estructuras `Set` (O1). | **Sistema de Resume**<br>Guarda el progreso en tiempo real. Si se va la luz, retomas exactamente donde te quedaste. |
+* **🔄 Sistema de Resume (Continuidad):** Si el proceso se interrumpe (pérdida de internet, apagón), el script guarda el estado en `progreso.json`. Al reiniciar, detecta la sesión anterior y continúa exactamente donde se quedó.
+* **🚀 Concurrencia Controlada:** Procesa subidas en lotes de **15 archivos simultáneos** (configurable) para maximizar el ancho de banda sin saturar la red.
+* **🧠 Smart Diffing:** Evita resubir archivos existentes comparando tu carpeta local contra una lista pre-generada de la nube (`lista_storage.txt`).
+* **📁 Organización Automática:** Sube las imágenes desde la carpeta local `./fotos` hacia la ruta remota `votantes_fotos/`.
 
 ---
 
-## 🧩 Arquitectura del Flujo
+## 🛠️ Requisitos y Configuración
 
-```mermaid
-graph TD
-    A[📁 Carpeta Local] -->|Lectura| B(Comparador O1)
-    C[☁️ Nube gsutil] -->|Parser UTF-16/8| B
-    B -->|Genera| D{¿Hay Faltantes?}
-    D -- No --> E[🎉 Fin del Proceso]
-    D -- Si --> F[📝 Cola de Trabajo]
-    F --> G[⚡ Batch Uploader]
-    G -->|Sube Lote| H[☁️ Firebase Storage]
-    H -->|Confirmación| I[💾 Guardar Checkpoint]
-    I -->|Siguiente Lote| G
+### 1. Prerrequisitos
+
+* **Node.js** instalado.
+* **Cuenta de Servicio de Firebase:** Archivo `.json` con permisos de escritura en Storage.
+
+### 2. Estructura de Archivos Esperada
+
+El script asume la siguiente estructura de directorios:
+
+```text
+📦 tu-proyecto
+ ┣ 📂 fotos                   <-- Coloca aquí las imágenes (.jpg, .png) a subir
+ ┣ 📂 src
+ ┃ ┗ 📂 data
+ ┃   ┗ 📜 lista_storage.txt   <-- Lista de archivos ya existentes en la nube (generada con gsutil o similar)
+ ┣ 📜 cargarPadron.js         <-- Este script
+ ┗ 📜 service-account.json    <-- Tu archivo de credenciales (nombre puede variar)
 ````
 
------
+### 3\. Configuración del Script
 
-## 🛠️ Instalación y Setup
-
-### 1\. Prerrequisitos
-
-Asegúrate de tener instalado:
-
-  * Node.js `v14+`
-  * Acceso a tu consola de Firebase
-
-### 2\. Clonar e Instalar
-
-```bash
-git clone [https://github.com/tu-usuario/firebase-bulk-sync.git](https://github.com/tu-usuario/firebase-bulk-sync.git)
-cd firebase-bulk-sync
-npm install
-```
-
-### 3\. Estructura de Archivos
-
-Tu carpeta debería verse así para que el script funcione "out of the box":
-
-```text
-📦 firebase-bulk-sync
- ┣ 📂 fotos              <-- 📸 TUS IMÁGENES AQUÍ
- ┣ 📂 data
- ┃ ┗ 📜 lista_storage.txt <-- (Opcional) Output de gsutil
- ┣ 📜 service-account.json <-- 🔑 TU LLAVE PRIVADA
- ┣ 📜 sync_master.js     <-- 🧠 EL CEREBRO
- ┗ 📜 package.json
-```
-
------
-
-## 🚀 Uso
-
-### Paso 1: Configuración
-
-Edita las primeras líneas de `sync_master.js`:
+Abre `cargarPadron.js` y edita la sección de **CONFIGURACIÓN** al inicio del archivo:
 
 ```javascript
-const CONFIG = {
-    bucketName: "tu-proyecto.firebasestorage.app",
-    concurrency: 25 // ⚡ Aumenta si tienes fibra óptica
-};
-```
-
-### Paso 2: Ejecutar
-
-```bash
-npm start
-```
-
-### Paso 3: ¡Disfruta\!
-
-El script te mostrará una interfaz de consola amigable:
-
-```text
-╔══════════════════════════════════════════════════════╗
-║      FIREBASE STORAGE BULK SYNCHRONIZER v2.0         ║
-╚══════════════════════════════════════════════════════╝
-
-🔍 Analizando índice de la nube...
-   ☁️  Archivos en nube: 222,748
-📂 Escaneando carpeta local...
-   💻 Archivos locales: 224,930
-═════════════════════════════════════════════════════════
-   📊 Faltantes: 2,182 archivos
-═════════════════════════════════════════════════════════
-
-👉 ¿Iniciar subida masiva? (s/n): s
+// Debes completar estas variables antes de ejecutar:
+const SERVICE_ACCOUNT = "./path/a/tu/service-account.json"; // Ruta a tu llave JSON
+const BUCKET_NAME = "tu-proyecto.appspot.com";              // Nombre de tu bucket
 ```
 
 -----
 
-## 🤖 Tecnologías
+## 🚀 Modo de Uso
 
-  * **Core:** Node.js (FS, Path, Readline)
-  * **Cloud:** Firebase Admin SDK
-  * **Algoritmos:** Diffing via Hash Sets & Batch Processing queues.
+1.  **Instalar dependencias:**
+
+    ```bash
+    npm install firebase-admin
+    ```
+
+2.  **Ejecutar el script:**
+
+    ```bash
+    node cargarPadron.js
+    ```
+
+3.  **Flujo de ejecución:**
+
+      * El script verificará si existe una sesión previa (`progreso.json`).
+      * Si es una nueva sesión, comparará `./fotos` con `./src/data/lista_storage.txt` para identificar faltantes.
+      * Se te pedirá confirmación para iniciar la carga: `(s/n)`.
+      * Verás una barra de progreso con el porcentaje y archivos restantes.
 
 -----
 
-\<div align="center"\>
-\<small\>Hecho con ❤️ para desarrolladores que valoran su tiempo.\</small\>
-\</div\>
+## 📝 Archivos Generados
 
+El script genera automáticamente estos archivos para control:
+
+  * `progreso.json`: Base de datos temporal de archivos pendientes. **No borrar** si deseas resumir la carga luego. Se borra automáticamente al finalizar con éxito.
+  * `faltantes_lista.txt`: Lista legible por humanos de todos los archivos que faltan por subir al momento del escaneo.
+
+-----
+
+## ⚠️ Notas Importantes
+
+  * **Lista de Storage:** El archivo `lista_storage.txt` es crucial para no duplicar trabajo. Asegúrate de que contenga los nombres de los archivos que YA están en la nube (puede estar codificado en UTF-8 o UTF-16).
+  * **Formatos:** Solo se procesan archivos con extensión `.jpg`, `.jpeg` o `.png`.
+
+<!-- end list -->
+
+```
 ```
 
 
