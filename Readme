@@ -1,21 +1,15 @@
-
-<div align="center">
-
-# ☁️ Firebase Storage Bulk Synchronizer
-### Script de Carga Masiva para Padrón Fotográfico
+#☁️ Firebase Storage Bulk Synchronizer
+###Script de Carga Masiva para Padrón Fotográfico
 
 ![NodeJS](https://img.shields.io/badge/node.js-v14+-6DA55F?style=for-the-badge&logo=node.js&logoColor=white)
 ![Firebase](https://img.shields.io/badge/firebase-admin-ffca28?style=for-the-badge&logo=firebase&logoColor=black)
 
-<p align="center">
-  <strong>Sincronización inteligente de imágenes locales a Firebase Storage con sistema de recuperación de fallos.</strong>
-</p>
 
-</div>
+Sincronización inteligente de imágenes locales a Firebase Storage con sistema de recuperación de fallos.
 
 ---
 
-## ⚡ Características Principales
+##⚡ Características Principales
 
 * **🔄 Sistema de Resume (Continuidad):** Si el proceso se interrumpe (pérdida de internet, apagón), el script guarda el estado en `progreso.json`. Al reiniciar, detecta la sesión anterior y continúa exactamente donde se quedó.
 * **🚀 Concurrencia Controlada:** Procesa subidas en lotes de **15 archivos simultáneos** (configurable) para maximizar el ancho de banda sin saturar la red.
@@ -24,14 +18,14 @@
 
 ---
 
-## 🛠️ Requisitos y Configuración
+##🛠️ Requisitos y Configuración
 
-### 1. Prerrequisitos
+###1. Prerrequisitos
 
 * **Node.js** instalado.
 * **Cuenta de Servicio de Firebase:** Archivo `.json` con permisos de escritura en Storage.
 
-### 2. Estructura de Archivos Esperada
+###2. Estructura de Archivos Esperada
 
 El script asume la siguiente estructura de directorios:
 
@@ -45,7 +39,7 @@ El script asume la siguiente estructura de directorios:
  ┗ 📜 service-account.json    <-- Tu archivo de credenciales (nombre puede variar)
 ````
 
-### 3\. Configuración del Script
+###3\. Configuración del Script
 
 Abre `cargarPadron.js` y edita la sección de **CONFIGURACIÓN** al inicio del archivo:
 
@@ -57,7 +51,7 @@ const BUCKET_NAME = "tu-proyecto.appspot.com";              // Nombre de tu buck
 
 -----
 
-## 🚀 Modo de Uso
+##🚀 Modo de Uso
 
 1.  **Instalar dependencias:**
 
@@ -80,7 +74,7 @@ const BUCKET_NAME = "tu-proyecto.appspot.com";              // Nombre de tu buck
 
 -----
 
-## 📝 Archivos Generados
+##📝 Archivos Generados
 
 El script genera automáticamente estos archivos para control:
 
@@ -89,15 +83,11 @@ El script genera automáticamente estos archivos para control:
 
 -----
 
-## ⚠️ Notas Importantes
+##⚠️ Notas Importantes
 
   * **Lista de Storage:** El archivo `lista_storage.txt` es crucial para no duplicar trabajo. Asegúrate de que contenga los nombres de los archivos que YA están en la nube (puede estar codificado en UTF-8 o UTF-16).
   * **Formatos:** Solo se procesan archivos con extensión `.jpg`, `.jpeg` o `.png`.
 
-<!-- end list -->
-
-```
-```
 
 
 
